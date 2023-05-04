@@ -10,6 +10,17 @@ type UserRepository struct {
 	DatabaseConnection *gorm.DB
 }
 
+func NewUserRepository(db *gorm.DB) *UserRepository {
+	err := db.AutoMigrate(&model.UserCredentials{})
+	if err != nil {
+		return nil
+	}
+
+	return &UserRepository{
+		DatabaseConnection: db,
+	}
+}
+
 func (repo *UserRepository) FindById(id string) (model.UserCredentials, error) {
 	user := model.UserCredentials{}
 

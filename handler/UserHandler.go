@@ -3,50 +3,52 @@ package handler
 import (
 	"autentification_service/model"
 	"autentification_service/service"
-	"encoding/json"
-	"net/http"
-	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-	"golang.org/x/crypto/bcrypt"
-)
+	pb "github.com/XML-organization/common/proto/autentification_service"
 
-type UserHandler struct {
-	UserService *service.UserService
-}
+	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+)
 
 const SecretKeyForJWT = "v123v1iy2v321sdasada8"
 
-func (loginHandler *UserHandler) Login(writer http.ResponseWriter, req *http.Request) {
+type UserHandler struct {
+	*pb.UnimplementedAutentificationServiceServer
+	UserService *service.UserService
+}
 
-	decoder := json.NewDecoder(req.Body)
-	var user model.UserDTO
-	err := decoder.Decode(&user)
-	if err != nil {
-		panic(err)
+func NewUserHandler(service *service.UserService) *UserHandler {
+	return &UserHandler{
+		UserService: service,
 	}
+}
+
+func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginResponse, error) {
+
+	println(in.Email)
+	println(in.Password)
+
+	user := MapUserDTOFromLoginRequest(in)
 
 	loggedUser, err := loginHandler.UserService.FindByEmail(user.Email)
 
 	if err != nil {
-		//writer.WriteHeader(http.StatusNotFound)
-		message := model.RequestMessage{
+		return &pb.LoginResponse{
 			Message: "User not found!",
-		}
-		json.NewEncoder(writer).Encode(message)
-		return
+		}, err
 	}
 
-	//password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 14)
-
 	if err := bcrypt.CompareHashAndPassword(loggedUser.Password, []byte(user.Password)); err != nil {
-		//writer.WriteHeader(http.StatusBadRequest)
-		message := model.RequestMessage{
+		return &pb.LoginResponse{
 			Message: "Incorrect password!",
-		}
-		json.NewEncoder(writer).Encode(message)
-		return
+		}, err
 	}
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256,
@@ -60,26 +62,23 @@ func (loginHandler *UserHandler) Login(writer http.ResponseWriter, req *http.Req
 	token, err := claims.SignedString([]byte(SecretKeyForJWT))
 
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		writer.Write([]byte("Could not login, JWT token can not be created!"))
-		return
+		return &pb.LoginResponse{
+			Message: "Could not login, JWT token can not be created!",
+		}, err
 	}
 
-	cookie := http.Cookie{
-		Name:     "jwt",
-		Value:    token,
-		Expires:  time.Now().Add(time.Hour * 24),
-		HttpOnly: true,
-	}
+	httpRespHeader := metadata.New(map[string]string{
+		"Set-Cookie": "jwt=" + token + "; HttpOnly; SameSite=Strict",
+	})
 
-	http.SetCookie(writer, &cookie)
+	grpc.SendHeader(ctx, httpRespHeader)
 
-	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(loggedUser)
-	return
+	return &pb.LoginResponse{
+		Message: "Login success!",
+	}, err
 }
 
-func (loginHandler *UserHandler) User(writer http.ResponseWriter, req *http.Request) {
+/*func (loginHandler *UserHandler) User(writer http.ResponseWriter, req *http.Request) {
 
 	cookies := req.Cookies()
 
@@ -132,31 +131,43 @@ func (loginHandler *UserHandler) Logout(writer http.ResponseWriter, req *http.Re
 
 	writer.WriteHeader(http.StatusOK)
 	writer.Write([]byte("Logout success!"))
-}
+}*/
 
-func (handler *UserHandler) Create(writer http.ResponseWriter, req *http.Request) {
-	var userDTO model.User
-	err := json.NewDecoder(req.Body).Decode(&userDTO)
-	if err != nil {
-		println("Error while parsing json")
-		writer.WriteHeader(http.StatusBadRequest)
-		return
-	}
+func (handler *UserHandler) Registration(ctx context.Context, in *pb.RegistrationRequest) (*pb.RegistrationResponse, error) {
+
+	//obrisi
+	println("//////////////")
+	println(in.Email)
+
+	userDTO := MapUserFromRegistrationRequest(in)
+
+	println(userDTO.Email)
 
 	var user model.UserCredentials
 	//hesovanje passworda
 	password, _ := bcrypt.GenerateFromPassword([]byte(userDTO.Password), 14)
 
+	user.ID = uuid.New()
+
 	user.Password = password
 	user.Email = userDTO.Email
 	user.Role = model.Role(userDTO.Role)
 
-	err = handler.UserService.Create(&user)
+	err := handler.UserService.Create(&user)
 	if err != nil {
-		println("Error while creating a new user")
-		writer.WriteHeader(http.StatusExpectationFailed)
-		return
+		return &pb.RegistrationResponse{
+			Message: "Error occured, please try again!",
+		}, err
 	}
-	writer.WriteHeader(http.StatusCreated)
-	writer.Header().Set("Content-Type", "application/json")
+
+	return &pb.RegistrationResponse{
+		Message: "Registration successful!",
+	}, err
+}
+
+func (handler *UserHandler) ChangePassword(ctx context.Context, in *pb.ChangePasswordRequest) (*pb.ChangePasswordResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (handler *UserHandler) ChangeEmail(ctx context.Context, in *pb.ChangeEmailRequest) (*pb.ChangeEmailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangeEmail not implemented")
 }

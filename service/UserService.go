@@ -10,6 +10,12 @@ type UserService struct {
 	UserRepo *repository.UserRepository
 }
 
+func NewUserService(repo *repository.UserRepository) *UserService {
+	return &UserService{
+		UserRepo: repo,
+	}
+}
+
 func (service *UserService) FindUser(id string) (*model.UserCredentials, error) {
 	user, err := service.UserRepo.FindById(id)
 	if err != nil {
