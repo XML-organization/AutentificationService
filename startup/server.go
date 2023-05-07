@@ -10,6 +10,8 @@ import (
 	"net"
 
 	pb "github.com/XML-organization/common/proto/autentification_service"
+	saga "github.com/XML-organization/common/saga/messaging"
+	"github.com/XML-organization/common/saga/messaging/nats"
 
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
@@ -25,13 +27,50 @@ func NewServer(config *config.Config) *Server {
 	}
 }
 
+const (
+	QueueGroup = "autentification_service"
+)
+
 func (server *Server) Start() {
 	postgresClient := server.initPostgresClient()
 	userRepo := server.initUserRepository(postgresClient)
-	userService := server.initUserService(userRepo)
+
+	commandPublisher := server.initPublisher(server.config.CreateUserCommandSubject)
+	replySubscriber := server.initSubscriber(server.config.CreateUserReplySubject, QueueGroup)
+	createUserOrchestrator := server.initCreateOrderOrchestrator(commandPublisher, replySubscriber)
+
+	userService := server.initUserService(userRepo, createUserOrchestrator)
 	userHandler := server.initUserHandler(userService)
 
 	server.startGrpcServer(userHandler)
+}
+
+func (server *Server) initPublisher(subject string) saga.Publisher {
+	publisher, err := nats.NewNATSPublisher(
+		server.config.NatsHost, server.config.NatsPort,
+		server.config.NatsUser, server.config.NatsPass, subject)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return publisher
+}
+
+func (server *Server) initSubscriber(subject, queueGroup string) saga.Subscriber {
+	subscriber, err := nats.NewNATSSubscriber(
+		server.config.NatsHost, server.config.NatsPort,
+		server.config.NatsUser, server.config.NatsPass, subject, queueGroup)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return subscriber
+}
+
+func (server *Server) initCreateOrderOrchestrator(publisher saga.Publisher, subscriber saga.Subscriber) *service.CreateUserOrchestrator {
+	orchestrator, err := service.NewCreateUserOrchestrator(publisher, subscriber)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return orchestrator
 }
 
 func (server *Server) initPostgresClient() *gorm.DB {
@@ -49,8 +88,8 @@ func (server *Server) initUserRepository(client *gorm.DB) *repository.UserReposi
 	return repository.NewUserRepository(client)
 }
 
-func (server *Server) initUserService(repo *repository.UserRepository) *service.UserService {
-	return service.NewUserService(repo)
+func (server *Server) initUserService(repo *repository.UserRepository, orchestrator *service.CreateUserOrchestrator) *service.UserService {
+	return service.NewUserService(repo, orchestrator)
 }
 
 func (server *Server) initUserHandler(service *service.UserService) *handler.UserHandler {

@@ -53,3 +53,12 @@ func (repo *UserRepository) CreateUser(user *model.UserCredentials) error {
 	println("Rows affected: ", dbResult.RowsAffected)
 	return nil
 }
+
+func (repo *UserRepository) Delete(user model.User) error {
+	dbResult := repo.DatabaseConnection.Delete(user)
+	if dbResult.Error != nil {
+		return dbResult.Error
+	}
+	println("Rows deleted: ", dbResult.RowsAffected)
+	return nil
+}

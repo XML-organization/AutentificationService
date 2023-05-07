@@ -8,7 +8,6 @@ import (
 	pb "github.com/XML-organization/common/proto/autentification_service"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -134,26 +133,16 @@ func (loginHandler *UserHandler) Logout(writer http.ResponseWriter, req *http.Re
 }*/
 
 func (handler *UserHandler) Registration(ctx context.Context, in *pb.RegistrationRequest) (*pb.RegistrationResponse, error) {
+	//obrisi
+	println("Pogodjen registration")
+
+	user := MapUserFromRegistrationRequest(in)
 
 	//obrisi
-	println("//////////////")
-	println(in.Email)
+	println("Podaci")
+	println(user.Email)
 
-	userDTO := MapUserFromRegistrationRequest(in)
-
-	println(userDTO.Email)
-
-	var user model.UserCredentials
-	//hesovanje passworda
-	password, _ := bcrypt.GenerateFromPassword([]byte(userDTO.Password), 14)
-
-	user.ID = uuid.New()
-
-	user.Password = password
-	user.Email = userDTO.Email
-	user.Role = model.Role(userDTO.Role)
-
-	err := handler.UserService.Create(&user)
+	err := handler.UserService.Create(user)
 	if err != nil {
 		return &pb.RegistrationResponse{
 			Message: "Error occured, please try again!",

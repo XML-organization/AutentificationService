@@ -4,15 +4,20 @@ import (
 	"autentification_service/model"
 	"autentification_service/repository"
 	"fmt"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
-	UserRepo *repository.UserRepository
+	UserRepo     *repository.UserRepository
+	orchestrator *CreateUserOrchestrator
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
+func NewUserService(repo *repository.UserRepository, orchestrator *CreateUserOrchestrator) *UserService {
 	return &UserService{
-		UserRepo: repo,
+		UserRepo:     repo,
+		orchestrator: orchestrator,
 	}
 }
 
@@ -33,8 +38,37 @@ func (service *UserService) FindByEmail(email string) (*model.UserCredentials, e
 	return &user, nil
 }
 
-func (service *UserService) Create(user *model.UserCredentials) error {
-	err := service.UserRepo.CreateUser(user)
+func (service *UserService) Create(user *model.User) error {
+
+	var userCredentials model.UserCredentials
+	//hesovanje passworda
+	password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 14)
+
+	userCredentials.ID, _ = uuid.NewUUID()
+
+	println("Ovo je id korisnika koji se treba sacuvati (autentification strana): " + userCredentials.ID.String())
+
+	userCredentials.Password = password
+	userCredentials.Email = user.Email
+	userCredentials.Role = model.Role(user.Role)
+
+	err := service.UserRepo.CreateUser(&userCredentials)
+	if err != nil {
+		return err
+	}
+
+	err1 := service.orchestrator.Start(user)
+
+	if err1 != nil {
+		service.UserRepo.Delete(*user)
+		return err1
+	}
+	return nil
+}
+
+func (service *UserService) DeleteUser(user *model.User) error {
+
+	err := service.UserRepo.Delete(*user)
 	if err != nil {
 		return err
 	}
