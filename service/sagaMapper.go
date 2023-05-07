@@ -8,7 +8,6 @@ import (
 
 func mapUserToSagaUser(u *model.User) *events.User {
 	return &events.User{
-		ID:       u.ID.String(),
 		Name:     u.Name,
 		Surname:  u.Surname,
 		Email:    u.Email,
