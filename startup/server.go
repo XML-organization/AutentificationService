@@ -35,6 +35,7 @@ func (server *Server) Start() {
 	postgresClient := server.initPostgresClient()
 	userRepo := server.initUserRepository(postgresClient)
 
+	//create user
 	commandPublisher := server.initPublisher(server.config.CreateUserCommandSubject)
 	replySubscriber := server.initSubscriber(server.config.CreateUserReplySubject, QueueGroup)
 	createUserOrchestrator := server.initCreateOrderOrchestrator(commandPublisher, replySubscriber)
@@ -42,7 +43,31 @@ func (server *Server) Start() {
 	userService := server.initUserService(userRepo, createUserOrchestrator)
 	userHandler := server.initUserHandler(userService)
 
+	//create user
+	commandSubscriber1 := server.initSubscriber(server.config.CreateUserCommandSubject, QueueGroup)
+	replyPublisher1 := server.initPublisher(server.config.CreateUserReplySubject)
+	server.initCreateUserHandler(userService, replyPublisher1, commandSubscriber1)
+
+	//change password
+	commandSubscriber2 := server.initSubscriber(server.config.ChangePasswordCommandSubject, QueueGroup)
+	replyPublisher2 := server.initPublisher(server.config.ChangePasswordReplySubject)
+	server.initChangePasswordHandler(userService, replyPublisher2, commandSubscriber2)
+
 	server.startGrpcServer(userHandler)
+}
+
+func (server *Server) initCreateUserHandler(service *service.UserService, publisher saga.Publisher, subscriber saga.Subscriber) {
+	_, err := handler.NewCreateUserCommandHandler(service, publisher, subscriber)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (server *Server) initChangePasswordHandler(service *service.UserService, publisher saga.Publisher, subscriber saga.Subscriber) {
+	_, err := handler.NewChangePasswordCommandHandler(service, publisher, subscriber)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (server *Server) initPublisher(subject string) saga.Publisher {

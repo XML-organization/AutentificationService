@@ -3,10 +3,11 @@ package handler
 import (
 	"autentification_service/model"
 
-	events "github.com/XML-organization/common/saga/create_user"
+	changePasswordEvents "github.com/XML-organization/common/saga/change_password"
+	createUserEvents "github.com/XML-organization/common/saga/create_user"
 )
 
-func mapSagaUserToUser(u *events.User) *model.User {
+func mapSagaUserToUser(u *createUserEvents.User) *model.User {
 
 	return &model.User{
 		Email:    u.Email,
@@ -18,5 +19,13 @@ func mapSagaUserToUser(u *events.User) *model.User {
 		City:     u.City,
 		Street:   u.Street,
 		Number:   u.Number,
+	}
+}
+
+func mapSagaChangePasswordToChangePasswordDTO(p *changePasswordEvents.ChangePasswordDTO) *model.ChangePasswordDTO {
+	return &model.ChangePasswordDTO{
+		Email:       p.Email,
+		OldPassword: p.OldPassword,
+		NewPassword: p.NewPassword,
 	}
 }

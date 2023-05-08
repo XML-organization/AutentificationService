@@ -28,6 +28,8 @@ func NewCreateUserCommandHandler(userService *service.UserService, publisher sag
 
 func (handler *CreateUserCommandHandler) handle(command *events.CreateUserCommand) {
 
+	println("HANDLE metoda ")
+
 	user := mapSagaUserToUser(&command.User)
 
 	reply := events.CreateUserReply{User: command.User}

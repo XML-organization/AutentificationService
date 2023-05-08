@@ -54,6 +54,27 @@ func (repo *UserRepository) CreateUser(user *model.UserCredentials) error {
 	return nil
 }
 
+func (repo *UserRepository) ChangePassword(changePassword model.ChangePasswordDTO) (model.RequestMessage, error) {
+	sqlStatementUser := `
+		UPDATE user_credentials
+		SET password = $2
+		WHERE email = $1;`
+
+	dbResult1 := repo.DatabaseConnection.Exec(sqlStatementUser, changePassword.Email, changePassword.NewPassword)
+
+	if dbResult1.Error != nil {
+		message := model.RequestMessage{
+			Message: "An error occurred, please try again!",
+		}
+		return message, dbResult1.Error
+	}
+
+	message := model.RequestMessage{
+		Message: "Success!",
+	}
+	return message, nil
+}
+
 func (repo *UserRepository) Delete(user model.User) error {
 	dbResult := repo.DatabaseConnection.Delete(user)
 	if dbResult.Error != nil {

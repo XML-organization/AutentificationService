@@ -66,6 +66,27 @@ func (service *UserService) Create(user *model.User) error {
 	return nil
 }
 
+func (service *UserService) ChangePassword(changePassword *model.ChangePasswordDTO) (model.RequestMessage, error) {
+	user, err := service.UserRepo.FindByEmail(changePassword.Email)
+
+	if err != nil {
+		message := model.RequestMessage{
+			Message: "An error occurred, please try again!",
+		}
+		return message, err
+	} else if err := bcrypt.CompareHashAndPassword(user.Password, []byte(changePassword.OldPassword)); err != nil {
+		message := model.RequestMessage{
+			Message: "The old password is not correct!",
+		}
+		return message, err
+	}
+
+	newPassword, _ := bcrypt.GenerateFromPassword([]byte(changePassword.NewPassword), 14)
+	changePassword.NewPassword = string(newPassword)
+
+	return service.UserRepo.ChangePassword(*changePassword)
+}
+
 func (service *UserService) DeleteUser(user *model.User) error {
 
 	err := service.UserRepo.Delete(*user)

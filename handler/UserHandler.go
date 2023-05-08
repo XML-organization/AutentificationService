@@ -38,6 +38,8 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 
 	loggedUser, err := loginHandler.UserService.FindByEmail(user.Email)
 
+	//println("Sifra usera sa emailom: " + in.Email + "je: " + string(loggedUser.Password))
+
 	if err != nil {
 		return &pb.LoginResponse{
 			Message: "User not found!",
