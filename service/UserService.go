@@ -87,6 +87,16 @@ func (service *UserService) ChangePassword(changePassword *model.ChangePasswordD
 	return service.UserRepo.ChangePassword(*changePassword)
 }
 
+func (service *UserService) ChangeEmail(emails *model.UpdateEmailDTO) error {
+	_, err := service.UserRepo.FindByEmail(emails.OldEmail)
+
+	if err != nil {
+		return err
+	}
+
+	return service.UserRepo.ChangeEmail(*emails)
+}
+
 func (service *UserService) DeleteUser(user *model.User) error {
 
 	err := service.UserRepo.Delete(*user)

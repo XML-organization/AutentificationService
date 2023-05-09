@@ -17,6 +17,8 @@ type Config struct {
 	CreateUserReplySubject       string
 	ChangePasswordCommandSubject string
 	ChangePasswordReplySubject   string
+	UpdateUserCommandSubject     string
+	UpdateUserReplySubject       string
 }
 
 func NewConfig() *Config {
@@ -35,5 +37,7 @@ func NewConfig() *Config {
 		CreateUserReplySubject:       os.Getenv("CREATE_USER_REPLY_SUBJECT"),
 		ChangePasswordCommandSubject: os.Getenv("CHANGE_PASSWORD_COMMAND_SUBJECT"),
 		ChangePasswordReplySubject:   os.Getenv("CHANGE_PASSWORD_REPLY_SUBJECT"),
+		UpdateUserCommandSubject:     os.Getenv("UPDATE_USER_COMMAND_SUBJECT"),
+		UpdateUserReplySubject:       os.Getenv("UPDATE_USER_REPLY_SUBJECT"),
 	}
 }

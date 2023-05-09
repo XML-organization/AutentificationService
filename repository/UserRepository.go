@@ -75,6 +75,20 @@ func (repo *UserRepository) ChangePassword(changePassword model.ChangePasswordDT
 	return message, nil
 }
 
+func (repo *UserRepository) ChangeEmail(emails model.UpdateEmailDTO) error {
+	sqlStatementUser := `
+		UPDATE user_credentials
+		SET email = $2
+		WHERE email = $1;`
+
+	dbResult1 := repo.DatabaseConnection.Exec(sqlStatementUser, emails.OldEmail, emails.NewEmail)
+
+	if dbResult1.Error != nil {
+		return dbResult1.Error
+	}
+	return nil
+}
+
 func (repo *UserRepository) Delete(user model.User) error {
 	dbResult := repo.DatabaseConnection.Delete(user)
 	if dbResult.Error != nil {

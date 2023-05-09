@@ -53,7 +53,18 @@ func (server *Server) Start() {
 	replyPublisher2 := server.initPublisher(server.config.ChangePasswordReplySubject)
 	server.initChangePasswordHandler(userService, replyPublisher2, commandSubscriber2)
 
+	commandSubscriber3 := server.initSubscriber(server.config.UpdateUserCommandSubject, QueueGroup)
+	replyPublisher3 := server.initPublisher(server.config.UpdateUserReplySubject)
+	server.initUpdateUserHandler(userService, replyPublisher3, commandSubscriber3)
+
 	server.startGrpcServer(userHandler)
+}
+
+func (server *Server) initUpdateUserHandler(service *service.UserService, publisher saga.Publisher, subscriber saga.Subscriber) {
+	_, err := handler.NewUpdateUserCommandHandler(service, publisher, subscriber)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (server *Server) initCreateUserHandler(service *service.UserService, publisher saga.Publisher, subscriber saga.Subscriber) {
