@@ -3,15 +3,19 @@ package handler
 import (
 	"autentification_service/model"
 	"autentification_service/service"
+	"log"
+	"strings"
 	"time"
 
 	pb "github.com/XML-organization/common/proto/autentification_service"
+	userServicepb "github.com/XML-organization/common/proto/user_service"
 
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -31,25 +35,20 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 
 func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginResponse, error) {
 
-	println(in.Email)
-	println(in.Password)
-
 	user := MapUserDTOFromLoginRequest(in)
 
 	loggedUser, err := loginHandler.UserService.FindByEmail(user.Email)
 
-	//println("Sifra usera sa emailom: " + in.Email + "je: " + string(loggedUser.Password))
-
 	if err != nil {
 		return &pb.LoginResponse{
 			Message: "User not found!",
-		}, err
+		}, status.Error(codes.OK, "User not found!")
 	}
 
-	if err := bcrypt.CompareHashAndPassword(loggedUser.Password, []byte(user.Password)); err != nil {
+	if err1 := bcrypt.CompareHashAndPassword(loggedUser.Password, []byte(user.Password)); err1 != nil {
 		return &pb.LoginResponse{
-			Message: "Incorrect password!",
-		}, err
+			Message: "Password is incorrect!",
+		}, status.Error(codes.OK, "Password is incorrect!")
 	}
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256,
@@ -64,8 +63,8 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 
 	if err != nil {
 		return &pb.LoginResponse{
-			Message: "Could not login, JWT token can not be created!",
-		}, err
+			Message: "Some error ocurred, please try again!",
+		}, status.Error(codes.OK, err.Error())
 	}
 
 	httpRespHeader := metadata.New(map[string]string{
@@ -74,8 +73,38 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 
 	grpc.SendHeader(ctx, httpRespHeader)
 
+	conn, err := grpc.Dial("user_service:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	userService := userServicepb.NewUserServiceClient(conn)
+
+	getUserByEmailResponse, err1 := userService.GetUserByEmail(context.TODO(), &userServicepb.GetUserByEmailRequest{Email: loggedUser.Email})
+
+	if err1 != nil {
+		println(err1.Error())
+		return nil, err1
+	}
+
+	println("grpc metoda uspjesno izvrsena")
+	println(getUserByEmailResponse.Email)
+	id := strings.Split(getUserByEmailResponse.Id, " |")[1]
+	println(id)
+
 	return &pb.LoginResponse{
-		Message: "Login success!",
+		Id:          id,
+		Name:        getUserByEmailResponse.Name,
+		Surname:     getUserByEmailResponse.Surname,
+		Email:       getUserByEmailResponse.Email,
+		Role:        pb.Role(getUserByEmailResponse.Role),
+		Country:     getUserByEmailResponse.Country,
+		City:        getUserByEmailResponse.City,
+		Street:      getUserByEmailResponse.Street,
+		Number:      getUserByEmailResponse.Number,
+		AccessToken: token,
+		Message:     "Login successful!",
 	}, err
 }
 

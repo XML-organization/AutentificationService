@@ -77,3 +77,17 @@ type UpdateEmailDTO struct {
 	OldEmail string `json:"old_email"`
 	NewEmail string `json:"new_email"`
 }
+
+type LoggedUserInformations struct {
+	ID           uuid.UUID `json:"id"`
+	Email        string    `json:"email"`
+	Password     string    `json:"password"`
+	Role         Role      `json:"role"`
+	Name         string    `json:"name"`
+	Surname      string    `json:"surname"`
+	Country      string    `json:"country"`
+	City         string    `json:"city" `
+	Street       string    `json:"street"`
+	Number       string    `json:"number"`
+	RefreshToken string    `json:"refreshtoken"`
+}
