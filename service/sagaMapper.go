@@ -7,7 +7,13 @@ import (
 )
 
 func mapUserToSagaUser(u *model.User) *events.User {
+
+	id := " |" + u.ID.String() + " |"
+	println("OVO JE ID STRING PRIJE NEGO SE POSLAO USER SERVISU")
+	println(id)
+
 	return &events.User{
+		Id:       id,
 		Name:     u.Name,
 		Surname:  u.Surname,
 		Email:    u.Email,

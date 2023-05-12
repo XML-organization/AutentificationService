@@ -27,24 +27,18 @@ func NewCreateUserCommandHandler(userService *service.UserService, publisher sag
 }
 
 func (handler *CreateUserCommandHandler) handle(command *events.CreateUserCommand) {
-
-	println("HANDLE metoda ")
-
 	user := mapSagaUserToUser(&command.User)
 
 	reply := events.CreateUserReply{User: command.User}
 
 	switch command.Type {
 	case events.PrintSuccessful:
-		println("Saga (Autentification servise side): User credentials and user created successfuly!")
 		reply.Type = events.SuccessfulyFinished
 	case events.DeleteUserCredentials:
 		err := handler.userService.DeleteUser(user)
 		if err != nil {
-			println("nisam uspjesno obrisao usera")
 			return
 		}
-		println("Saga (Autentification servise side): User credentials deleted successfuly!")
 		reply.Type = events.UserCredentialsDeleted
 	default:
 		reply.Type = events.UnknownReply

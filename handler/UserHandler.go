@@ -3,6 +3,7 @@ package handler
 import (
 	"autentification_service/model"
 	"autentification_service/service"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -20,7 +21,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const SecretKeyForJWT = "v123v1iy2v321sdasada8"
+const (
+	authorizationHeader = "authorization"
+	authorizationBearer = "bearer"
+	SecretKeyForJWT     = "v123v1iy2v321sdasada8"
+)
 
 type UserHandler struct {
 	*pb.UnimplementedAutentificationServiceServer
@@ -31,6 +36,63 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 	return &UserHandler{
 		UserService: service,
 	}
+}
+
+func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUserRequest) (*pb.AuthorizeUserResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("Missing metadata")
+	}
+
+	values := md.Get(authorizationHeader)
+	if len(values) == 0 {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("missing authorization header")
+	}
+
+	authHeader := values[0]
+	fields := strings.Fields(authHeader)
+	if len(fields) < 2 {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("invalid authorization header format")
+	}
+
+	authType := strings.ToLower(fields[0])
+	if authType != authorizationBearer {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("unsupported authorization type: %s", authType)
+	}
+
+	accessToken := fields[1]
+	token, claims := handler.UserService.GetClaimsFrowJwt(accessToken)
+	if token == nil {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("invalid access token")
+	}
+
+	//token validation
+	if !token.Valid {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("Token is not valid")
+	}
+
+	//role validation
+	if int(in.Role) != claims.Role {
+		return &pb.AuthorizeUserResponse{
+			Message: "Unauthorized",
+		}, fmt.Errorf("Unauthorize")
+	}
+
+	return &pb.AuthorizeUserResponse{
+		Message: "Access granted",
+	}, nil
 }
 
 func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginResponse, error) {
@@ -88,7 +150,6 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 		return nil, err1
 	}
 
-	println("grpc metoda uspjesno izvrsena")
 	println(getUserByEmailResponse.Email)
 	id := strings.Split(getUserByEmailResponse.Id, " |")[1]
 	println(id)
@@ -164,17 +225,17 @@ func (loginHandler *UserHandler) Logout(writer http.ResponseWriter, req *http.Re
 }*/
 
 func (handler *UserHandler) Registration(ctx context.Context, in *pb.RegistrationRequest) (*pb.RegistrationResponse, error) {
-	//obrisi
-	println("Pogodjen registration")
 
 	user := MapUserFromRegistrationRequest(in)
 
-	//obrisi
-	println("Podaci")
-	println(user.Email)
-
 	err := handler.UserService.Create(user)
 	if err != nil {
+		if err.Error() == "user already exist" {
+			err = nil
+			return &pb.RegistrationResponse{
+				Message: "User already exist!",
+			}, err
+		}
 		return &pb.RegistrationResponse{
 			Message: "Error occured, please try again!",
 		}, err

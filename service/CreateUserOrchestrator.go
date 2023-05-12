@@ -30,7 +30,6 @@ func (o *CreateUserOrchestrator) Start(user *model.User) error {
 		User: *mapUserToSagaUser(user),
 	}
 
-	println("Nalazim se u start metodi orkestratora!")
 	return o.commandPublisher.Publish(event)
 }
 
@@ -43,8 +42,6 @@ func (o *CreateUserOrchestrator) handle(reply *events.CreateUserReply) {
 }
 
 func (o *CreateUserOrchestrator) nextCommandType(reply events.CreateUserReplyType) events.CreateUserCommandType {
-
-	println("usao u nextCommandType metodu orkestratora")
 
 	switch reply {
 	case events.UserSaved:

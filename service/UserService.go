@@ -5,9 +5,12 @@ import (
 	"autentification_service/repository"
 	"fmt"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const SecretKeyForJWT = "v123v1iy2v321sdasada8"
 
 type UserService struct {
 	UserRepo     *repository.UserRepository
@@ -40,14 +43,17 @@ func (service *UserService) FindByEmail(email string) (*model.UserCredentials, e
 
 func (service *UserService) Create(user *model.User) error {
 
+	existingUser, _ := service.UserRepo.FindByEmail(user.Email)
+	if existingUser.Email == user.Email {
+		println("usao u user already exist //////////////////")
+		return fmt.Errorf("user already exist")
+	}
+
 	var userCredentials model.UserCredentials
-	//hesovanje passworda
+
 	password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 14)
 
 	userCredentials.ID, _ = uuid.NewUUID()
-
-	println("Ovo je id korisnika koji se treba sacuvati (autentification strana): " + userCredentials.ID.String())
-
 	userCredentials.Password = password
 	userCredentials.Email = user.Email
 	userCredentials.Role = model.Role(user.Role)
@@ -57,6 +63,7 @@ func (service *UserService) Create(user *model.User) error {
 		return err
 	}
 
+	user.ID = userCredentials.ID
 	err1 := service.orchestrator.Start(user)
 
 	if err1 != nil {
@@ -104,4 +111,23 @@ func (service *UserService) DeleteUser(user *model.User) error {
 		return err
 	}
 	return nil
+}
+
+func (service *UserService) GetClaimsFrowJwt(tokenString string) (*jwt.Token, model.JwtClaims) {
+
+	claims := &model.JwtClaims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims,
+		func(t *jwt.Token) (interface{}, error) {
+			return []byte(SecretKeyForJWT), nil
+		})
+
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return nil, model.JwtClaims{}
+		}
+		return nil, model.JwtClaims{}
+	}
+
+	return token, *claims
 }
