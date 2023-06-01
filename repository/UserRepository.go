@@ -97,3 +97,24 @@ func (repo *UserRepository) Delete(user model.User) error {
 	println("Rows deleted: ", dbResult.RowsAffected)
 	return nil
 }
+
+func (repo *UserRepository) FindByIdUser(id string) (model.User, error) {
+	user := model.User{}
+
+	dbResult := repo.DatabaseConnection.First(&user, "id = ?", id)
+
+	if dbResult != nil {
+		return user, dbResult.Error
+	}
+
+	return user, nil
+}
+
+func (repo *UserRepository) DeleteUserCredentials(user model.UserCredentials) error {
+	dbResult := repo.DatabaseConnection.Delete(user)
+	if dbResult.Error != nil {
+		return dbResult.Error
+	}
+	println("Rows deleted: ", dbResult.RowsAffected)
+	return nil
+}

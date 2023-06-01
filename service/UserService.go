@@ -131,3 +131,20 @@ func (service *UserService) GetClaimsFrowJwt(tokenString string) (*jwt.Token, mo
 
 	return token, *claims
 }
+
+func (service *UserService) FindByIdUser(id string) (*model.User, error) {
+	user, err := service.UserRepo.FindByIdUser(id)
+	if err != nil {
+		return nil, fmt.Errorf(fmt.Sprintf("menu item with id %s not found", id))
+	}
+	return &user, nil
+}
+
+func (service *UserService) DeleteUserCredentials(user *model.UserCredentials) error {
+
+	err := service.UserRepo.DeleteUserCredentials(*user)
+	if err != nil {
+		return err
+	}
+	return nil
+}

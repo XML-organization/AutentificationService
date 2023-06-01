@@ -252,3 +252,19 @@ func (handler *UserHandler) ChangePassword(ctx context.Context, in *pb.ChangePas
 func (handler *UserHandler) ChangeEmail(ctx context.Context, in *pb.ChangeEmailRequest) (*pb.ChangeEmailResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangeEmail not implemented")
 }
+
+func (handler *UserHandler) DeleteUser(ctx context.Context, request *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
+	userC, err := handler.UserService.FindByEmail(request.Email)
+	println("email aut" + request.Email)
+	if err != nil {
+		panic(err)
+	}
+	err3 := handler.UserService.DeleteUserCredentials(userC)
+	if err3 != nil {
+		panic(err3)
+	}
+
+	return &pb.DeleteUserResponse{
+		Message: "ok",
+	}, err
+}
