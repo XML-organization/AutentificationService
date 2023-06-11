@@ -3,6 +3,7 @@ package handler
 import (
 	"autentification_service/model"
 	"autentification_service/service"
+	"log"
 
 	saga "github.com/XML-organization/common/saga/messaging"
 	events "github.com/XML-organization/common/saga/update_user"
@@ -22,6 +23,7 @@ func NewUpdateUserCommandHandler(userService *service.UserService, publisher sag
 	}
 	err := o.commandSubscriber.Subscribe(o.handle)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return o, nil
@@ -35,10 +37,11 @@ func (handler *UpdateUserCommandHandler) handle(command *events.UpdateUserComman
 		err := handler.userService.ChangeEmail(&model.UpdateEmailDTO{OldEmail: command.UpdateUserDTO.OldEmail, NewEmail: command.UpdateUserDTO.NewEmail})
 		if err != nil {
 			reply.Type = events.UserNotUpdated
-			println("Saga: User not updated successfuly!")
+			log.Println(err)
+			log.Println("Saga: User not updated successfuly!")
 			break
 		}
-		println("Saga: Password changed successfuly!")
+		log.Println("Saga: Password changed successfuly!")
 		reply.Type = events.UserUpdated
 	default:
 		reply.Type = events.UnknownReply

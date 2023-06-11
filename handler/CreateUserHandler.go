@@ -2,6 +2,7 @@ package handler
 
 import (
 	"autentification_service/service"
+	"log"
 
 	events "github.com/XML-organization/common/saga/create_user"
 	saga "github.com/XML-organization/common/saga/messaging"
@@ -21,6 +22,7 @@ func NewCreateUserCommandHandler(userService *service.UserService, publisher sag
 	}
 	err := o.commandSubscriber.Subscribe(o.handle)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return o, nil
@@ -37,6 +39,7 @@ func (handler *CreateUserCommandHandler) handle(command *events.CreateUserComman
 	case events.DeleteUserCredentials:
 		err := handler.userService.DeleteUser(user)
 		if err != nil {
+			log.Println(err)
 			return
 		}
 		reply.Type = events.UserCredentialsDeleted

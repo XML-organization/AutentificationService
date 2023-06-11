@@ -4,6 +4,7 @@ import (
 	"autentification_service/model"
 	"autentification_service/repository"
 	"fmt"
+	"log"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
@@ -27,6 +28,7 @@ func NewUserService(repo *repository.UserRepository, orchestrator *CreateUserOrc
 func (service *UserService) FindUser(id string) (*model.UserCredentials, error) {
 	user, err := service.UserRepo.FindById(id)
 	if err != nil {
+		log.Println(err)
 		return nil, fmt.Errorf(fmt.Sprintf("menu item with id %s not found", id))
 	}
 	return &user, nil
@@ -35,6 +37,7 @@ func (service *UserService) FindUser(id string) (*model.UserCredentials, error) 
 func (service *UserService) FindByEmail(email string) (*model.UserCredentials, error) {
 	user, err := service.UserRepo.FindByEmail(email)
 	if err != nil {
+		log.Println(err)
 		return nil, fmt.Errorf(fmt.Sprintf("User not found!"))
 	}
 
@@ -45,7 +48,7 @@ func (service *UserService) Create(user *model.User) error {
 
 	existingUser, _ := service.UserRepo.FindByEmail(user.Email)
 	if existingUser.Email == user.Email {
-		println("usao u user already exist //////////////////")
+		log.Println("usao u user already exist //////////////////")
 		return fmt.Errorf("user already exist")
 	}
 
@@ -60,6 +63,7 @@ func (service *UserService) Create(user *model.User) error {
 
 	err := service.UserRepo.CreateUser(&userCredentials)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -67,6 +71,7 @@ func (service *UserService) Create(user *model.User) error {
 	err1 := service.orchestrator.Start(user)
 
 	if err1 != nil {
+		log.Println(err1)
 		service.UserRepo.Delete(*user)
 		return err1
 	}
@@ -77,11 +82,13 @@ func (service *UserService) ChangePassword(changePassword *model.ChangePasswordD
 	user, err := service.UserRepo.FindByEmail(changePassword.Email)
 
 	if err != nil {
+		log.Println(err)
 		message := model.RequestMessage{
 			Message: "An error occurred, please try again!",
 		}
 		return message, err
 	} else if err := bcrypt.CompareHashAndPassword(user.Password, []byte(changePassword.OldPassword)); err != nil {
+		log.Println(err)
 		message := model.RequestMessage{
 			Message: "The old password is not correct!",
 		}
@@ -98,6 +105,7 @@ func (service *UserService) ChangeEmail(emails *model.UpdateEmailDTO) error {
 	_, err := service.UserRepo.FindByEmail(emails.OldEmail)
 
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -108,6 +116,7 @@ func (service *UserService) DeleteUser(user *model.User) error {
 
 	err := service.UserRepo.Delete(*user)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -123,6 +132,7 @@ func (service *UserService) GetClaimsFrowJwt(tokenString string) (*jwt.Token, mo
 		})
 
 	if err != nil {
+		log.Println(err)
 		if err == jwt.ErrSignatureInvalid {
 			return nil, model.JwtClaims{}
 		}
@@ -135,6 +145,7 @@ func (service *UserService) GetClaimsFrowJwt(tokenString string) (*jwt.Token, mo
 func (service *UserService) FindByIdUser(id string) (*model.User, error) {
 	user, err := service.UserRepo.FindByIdUser(id)
 	if err != nil {
+		log.Println(err)
 		return nil, fmt.Errorf(fmt.Sprintf("menu item with id %s not found", id))
 	}
 	return &user, nil
@@ -144,6 +155,7 @@ func (service *UserService) DeleteUserCredentials(user *model.UserCredentials) e
 
 	err := service.UserRepo.DeleteUserCredentials(*user)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil

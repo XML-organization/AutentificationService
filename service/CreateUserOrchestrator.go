@@ -2,6 +2,7 @@ package service
 
 import (
 	"autentification_service/model"
+	"log"
 
 	events "github.com/XML-organization/common/saga/create_user"
 	saga "github.com/XML-organization/common/saga/messaging"
@@ -19,6 +20,7 @@ func NewCreateUserOrchestrator(publisher saga.Publisher, subscriber saga.Subscri
 	}
 	err := o.replySubscriber.Subscribe(o.handle)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return o, nil
