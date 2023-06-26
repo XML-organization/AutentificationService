@@ -2,6 +2,7 @@ package handler
 
 import (
 	"autentification_service/service"
+	"log"
 
 	events "github.com/XML-organization/common/saga/change_password"
 	saga "github.com/XML-organization/common/saga/messaging"
@@ -21,6 +22,7 @@ func NewChangePasswordCommandHandler(userService *service.UserService, publisher
 	}
 	err := o.commandSubscriber.Subscribe(o.handle)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return o, nil
@@ -29,20 +31,21 @@ func NewChangePasswordCommandHandler(userService *service.UserService, publisher
 func (handler *ChangePasswordCommandHandler) handle(command *events.ChangePasswordCommand) {
 	reply := events.ChangePasswordReply{ChangePasswordDTO: command.ChagePasswordDTO}
 
-	println("Change password: Usao sam u handle metodu na autentification strani")
-	println("Ovo je tip comande koju sam dobio: %v", command.Type)
+	log.Println("Change password: Usao sam u handle metodu na autentification strani")
+	log.Println("Ovo je tip comande koju sam dobio:", command.Type)
 
 	switch command.Type {
 	case events.ChangePassword:
-		println("Novi password" + command.ChagePasswordDTO.NewPassword)
-		println("Stari password" + command.ChagePasswordDTO.OldPassword)
+		log.Println("Novi password" + command.ChagePasswordDTO.NewPassword)
+		log.Println("Stari password" + command.ChagePasswordDTO.OldPassword)
 		_, err := handler.userService.ChangePassword(mapSagaChangePasswordToChangePasswordDTO(&command.ChagePasswordDTO))
 		if err != nil {
 			reply.Type = events.PasswordNotChanged
-			println("Saga: User password dont changed successfuly!")
+			log.Println(err)
+			log.Println("Saga: User password dont changed successfuly!")
 			break
 		}
-		println("Saga: Password changed successfuly!")
+		log.Println("Saga: Password changed successfuly!")
 		reply.Type = events.PasswordChanged
 	default:
 		reply.Type = events.UnknownReply

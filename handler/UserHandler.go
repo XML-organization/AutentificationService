@@ -41,6 +41,7 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUserRequest) (*pb.AuthorizeUserResponse, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
+		log.Println("Unauthorized. Missing metadata")
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("Missing metadata")
@@ -48,6 +49,7 @@ func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUs
 
 	values := md.Get(authorizationHeader)
 	if len(values) == 0 {
+		log.Println("Unauthorized. missing authorization header")
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("missing authorization header")
@@ -56,6 +58,7 @@ func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUs
 	authHeader := values[0]
 	fields := strings.Fields(authHeader)
 	if len(fields) < 2 {
+		log.Println("Unauthorized. invalid authorization header format")
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("invalid authorization header format")
@@ -63,6 +66,7 @@ func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUs
 
 	authType := strings.ToLower(fields[0])
 	if authType != authorizationBearer {
+		log.Println("Unauthorized. unsupported authorization type:", authType)
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("unsupported authorization type: %s", authType)
@@ -71,6 +75,7 @@ func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUs
 	accessToken := fields[1]
 	token, claims := handler.UserService.GetClaimsFrowJwt(accessToken)
 	if token == nil {
+		log.Println("Unauthorized. invalid access token")
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("invalid access token")
@@ -78,6 +83,7 @@ func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUs
 
 	//token validation
 	if !token.Valid {
+		log.Println("Unauthorized. Token is not valid")
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("Token is not valid")
@@ -85,11 +91,12 @@ func (handler *UserHandler) AutorizeUser(ctx context.Context, in *pb.AuthorizeUs
 
 	//role validation
 	if int(in.Role) != claims.Role {
+		log.Println("Unauthorized. Unauthorized")
 		return &pb.AuthorizeUserResponse{
 			Message: "Unauthorized",
 		}, fmt.Errorf("Unauthorize")
 	}
-
+	log.Println("Access granted")
 	return &pb.AuthorizeUserResponse{
 		Message: "Access granted",
 	}, nil
@@ -102,12 +109,16 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 	loggedUser, err := loginHandler.UserService.FindByEmail(user.Email)
 
 	if err != nil {
+		log.Println("User not found!")
+		log.Println(err)
 		return &pb.LoginResponse{
 			Message: "User not found!",
 		}, status.Error(codes.OK, "User not found!")
 	}
 
 	if err1 := bcrypt.CompareHashAndPassword(loggedUser.Password, []byte(user.Password)); err1 != nil {
+		log.Println("Password is incorrect")
+		log.Println(err)
 		return &pb.LoginResponse{
 			Message: "Password is incorrect!",
 		}, status.Error(codes.OK, "Password is incorrect!")
@@ -124,6 +135,8 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 	token, err := claims.SignedString([]byte(SecretKeyForJWT))
 
 	if err != nil {
+		log.Println("Some error ocurred, please try again!")
+		log.Println(err)
 		return &pb.LoginResponse{
 			Message: "Some error ocurred, please try again!",
 		}, status.Error(codes.OK, err.Error())
@@ -146,7 +159,7 @@ func (loginHandler *UserHandler) Login(ctx context.Context, in *pb.LoginRequest)
 	getUserByEmailResponse, err1 := userService.GetUserByEmail(context.TODO(), &userServicepb.GetUserByEmailRequest{Email: loggedUser.Email})
 
 	if err1 != nil {
-		println(err1.Error())
+		log.Println(err1.Error())
 		return nil, err1
 	}
 
@@ -230,6 +243,7 @@ func (handler *UserHandler) Registration(ctx context.Context, in *pb.Registratio
 
 	err := handler.UserService.Create(user)
 	if err != nil {
+		log.Println(err)
 		if err.Error() == "user already exist" {
 			err = nil
 			return &pb.RegistrationResponse{
@@ -257,10 +271,12 @@ func (handler *UserHandler) DeleteUser(ctx context.Context, request *pb.DeleteUs
 	userC, err := handler.UserService.FindByEmail(request.Email)
 	println("email aut" + request.Email)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 	err3 := handler.UserService.DeleteUserCredentials(userC)
 	if err3 != nil {
+		log.Println(err3)
 		panic(err3)
 	}
 

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"autentification_service/model"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -27,6 +28,7 @@ func (repo *UserRepository) FindById(id string) (model.UserCredentials, error) {
 	dbResult := repo.DatabaseConnection.First(&user, "id = ?", id)
 
 	if dbResult != nil {
+		log.Println(dbResult.Error)
 		return user, dbResult.Error
 	}
 
@@ -39,6 +41,7 @@ func (repo *UserRepository) FindByEmail(email string) (model.UserCredentials, er
 	dbResult := repo.DatabaseConnection.First(&user, "email = ?", email)
 
 	if dbResult != nil {
+		log.Println(dbResult.Error)
 		return user, dbResult.Error
 	}
 
@@ -48,9 +51,10 @@ func (repo *UserRepository) FindByEmail(email string) (model.UserCredentials, er
 func (repo *UserRepository) CreateUser(user *model.UserCredentials) error {
 	dbResult := repo.DatabaseConnection.Create(user)
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		return dbResult.Error
 	}
-	println("Rows affected: ", dbResult.RowsAffected)
+	log.Println("Rows affected: ", dbResult.RowsAffected)
 	return nil
 }
 
@@ -63,6 +67,7 @@ func (repo *UserRepository) ChangePassword(changePassword model.ChangePasswordDT
 	dbResult1 := repo.DatabaseConnection.Exec(sqlStatementUser, changePassword.Email, changePassword.NewPassword)
 
 	if dbResult1.Error != nil {
+		log.Println(dbResult1.Error)
 		message := model.RequestMessage{
 			Message: "An error occurred, please try again!",
 		}
@@ -84,6 +89,7 @@ func (repo *UserRepository) ChangeEmail(emails model.UpdateEmailDTO) error {
 	dbResult1 := repo.DatabaseConnection.Exec(sqlStatementUser, emails.OldEmail, emails.NewEmail)
 
 	if dbResult1.Error != nil {
+		log.Println(dbResult1.Error)
 		return dbResult1.Error
 	}
 	return nil
@@ -92,9 +98,10 @@ func (repo *UserRepository) ChangeEmail(emails model.UpdateEmailDTO) error {
 func (repo *UserRepository) Delete(user model.User) error {
 	dbResult := repo.DatabaseConnection.Delete(user)
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		return dbResult.Error
 	}
-	println("Rows deleted: ", dbResult.RowsAffected)
+	log.Println("Rows deleted: ", dbResult.RowsAffected)
 	return nil
 }
 
@@ -104,6 +111,7 @@ func (repo *UserRepository) FindByIdUser(id string) (model.User, error) {
 	dbResult := repo.DatabaseConnection.First(&user, "id = ?", id)
 
 	if dbResult != nil {
+		log.Println(dbResult.Error)
 		return user, dbResult.Error
 	}
 
@@ -113,8 +121,9 @@ func (repo *UserRepository) FindByIdUser(id string) (model.User, error) {
 func (repo *UserRepository) DeleteUserCredentials(user model.UserCredentials) error {
 	dbResult := repo.DatabaseConnection.Delete(user)
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		return dbResult.Error
 	}
-	println("Rows deleted: ", dbResult.RowsAffected)
+	log.Println("Rows deleted: ", dbResult.RowsAffected)
 	return nil
 }
